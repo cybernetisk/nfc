@@ -28,6 +28,7 @@ Installeres med apt-get:
 * i2c-tools
 * python-smbus
 * git-core
+
 Tror også man trenger:
 * cmake
 * autoconf
