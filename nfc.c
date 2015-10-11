@@ -76,21 +76,47 @@ static PyObject * my_nfc_close() //PyObject *self, PyObject *args)
 	return Py_BuildValue("");
 }
 
-static PyMethodDef NfcMethods[] = {
+static PyMethodDef nfc_methods[] = {
 	{"open", my_nfc_open, METH_VARARGS, "Open NFC-handle."},
 	{"getid", my_nfc_getid, METH_VARARGS, "Get ID from NFC-card."},
 	{"close", my_nfc_close, METH_VARARGS, "Close NFC-handle."},
 	{NULL, NULL, 0, NULL}
 };
 
+static struct PyModuleDef nfc_module = {
+	PyModuleDef_HEAD_INIT,
+	"nfc",        /* m_name */
+	NULL,         /* m_doc */
+	-1,           /* m_size */
+	nfc_methods,  /* m_methods */
+	NULL,         /* m_reload */
+	NULL,         /* m_traverse */
+	NULL,         /* m_clear */
+	NULL          /* m_tree */
+};
+
 PyMODINIT_FUNC initnfc(void)
 {
-	(void) Py_InitModule("nfc", NfcMethods);
+	return PyModule_Create(&nfc_module);
+}
+
+static wchar_t* char_to_wchar(const char* text)
+{
+	size_t size = strlen(text) + 1;
+	wchar_t *wa = malloc(sizeof(wchar_t) * size);
+	mbstowcs(wa, text, size);
+	return wa;
 }
 
 int main(int argc, char *argv[])
 {
-	Py_SetProgramName(argv[0]);
+	(void) argc;
+	wchar_t *wargv0 = char_to_wchar(argv[0]);
+
+	PyImport_AppendInittab("nfc", initnfc);
+	Py_SetProgramName(wargv0);
+	free(wargv0);
+
 	Py_Initialize();
 	initnfc();
 	return 0;

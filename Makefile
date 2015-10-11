@@ -1,2 +1,2 @@
 all:
-	gcc -Wall -Wextra -o nfc.so nfc.c -lnfc -shared -I/usr/include/python2.7
+	gcc -Wall -fPIC -Wextra -o nfc.so nfc.c -lnfc -shared -I/usr/include/python3.4
