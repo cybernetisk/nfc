@@ -95,7 +95,7 @@ static struct PyModuleDef nfc_module = {
 	NULL          /* m_tree */
 };
 
-PyMODINIT_FUNC initnfc(void)
+PyMODINIT_FUNC PyInit_nfc(void)
 {
 	return PyModule_Create(&nfc_module);
 }
@@ -113,11 +113,10 @@ int main(int argc, char *argv[])
 	(void) argc;
 	wchar_t *wargv0 = char_to_wchar(argv[0]);
 
-	PyImport_AppendInittab("nfc", initnfc);
+	PyImport_AppendInittab("nfc", PyInit_nfc);
 	Py_SetProgramName(wargv0);
 	free(wargv0);
 
 	Py_Initialize();
-	initnfc();
 	return 0;
 }
