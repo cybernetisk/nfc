@@ -1,4 +1,4 @@
-﻿# nfc
+﻿# NFC
 NFC-system til Escape for bruk til bongsystem, internstatus, medlemsskap.
 
 Mer informasjon ligger på den interne wikien til CYB:
@@ -23,7 +23,14 @@ i Python.
 
 ## Sette opp
 
+### Nødvendig utstyr
+* Raspberry Pi 2 Model B
+* 2x LCD Skjerm
+* NFC Leser
+
 ### Nødvendige pakker på maskinen
+Alle pakker blir installert med ``setup.sh``, så det er ikke nødvendig å installere noe manuelt.
+
 Installeres med apt-get:
 * i2c-tools
 * python-smbus
@@ -35,43 +42,20 @@ Tror også man trenger:
 * libtool
 * python-dev
 
-### Sette opp libnfc og i2c-støtte
+### Gjøre klar for kjøring
 For å kommunisere med NFC-chippen, benytter vi oss av [libnfc](https://github.com/nfc-tools/libnfc).
-
-Last ned libnfc fra lenken ovenfor og følge oppskriften under.
 
 NB! Dette er ikke testet slik det står her, så mulig det må noen tilpasninger til for at det skal funke.
 
 ```bash
-# sørg for å være i mappen til libnfc som er lastet ned
+# Kjør setup-scripten
+sh setup.sh
 
-sudo mkdir -p /etc/nfc/devices.d
-sudo cp contrib/libnfc/pn532_i2c_on_rpi.conf.sample /etc/nfc/devices.d/pn532_i2c_on_rpi.conf
+# Restart slik at i2c får lastet inn
+reboot
 
-# aktiver i2c på raspberry pi
-
-# i raspi-blacklist.conf, kommenter ut: #blacklist i2c-bcm2708
-sudo vim /etc/modprobe.d/raspi-blacklist.conf
-
-# edit /etc/modules, add new line: i2c-dev
-sudo vim /etc/modules
-
-# rediger filen, les kommentarene i den
-sudo vim /etc/nfc/devices.d/pn532_i2c_on_rpi.conf
-
-./configure --with-drivers pn532_i2c --sysconfdir=/etc --prefix=/usr
-
-sudo make install
-
-# nfc-biblioteket er nå tilgjengelig på maskinen
-# vi må restarte for at i2c-støtten aktiveres
-sudo shutdown -r 0
-
-# gi tilgang til pi-brukeren til i2c
-sudo adduser pi i2c
-
-# sjekk for enheter
-i2cdetect -y 1 # evt 0, se pn532_i2c_on_rpi.conf
+# Sjekk for enheter. Det skal være 3 i i2cdetect.
+i2cdetect -y 1
 nfc-list
 ```
 
