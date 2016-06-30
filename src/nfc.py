@@ -6,10 +6,10 @@ import nfc
 from lcd import LcdDisplay
 
 # Input pins
-cancel_button = 25
-enter_button = 24
-pluss_button = 23
-minus_button = 22
+cancel_button = 37
+enter_button = 35
+pluss_button = 33
+minus_button = 31
 # The i2c bus id
 bus_id = 1
 # Host address of the LCD display
@@ -36,7 +36,7 @@ def setup():
         lcd.write("Laster systemet...")
 
     # Get the bong amount inputs ready
-    GPIO.setmode(GPIO.BCM)
+    GPIO.setmode(GPIO.BOARD)
     for pin in cancel_button, enter_button, pluss_button, minus_button:
         GPIO.setup(pin, GPIO.IN)
 
@@ -75,10 +75,6 @@ def display_info(customer):
 
 
 def get_amount():
-    # TODO: Remember to remove this if-statement!
-    if True:
-        return 0
-
     amount = 0
 
     while not GPIO.input(enter_button):
@@ -91,18 +87,26 @@ def get_amount():
             amount += 1
         elif GPIO.input(minus_button) and amount > 0:
             amount -= 1
+        
+        # FIXME: Buttons sometimes register double, or not at all.
+        # Sleep to not register buttons multiple times
+        time.sleep(0.1)
 
     return amount
 
 
 def register_use(customer, amount):
-    pass
+    # TODO: Registrer bonger
+    customer_lcd.clean()
+    customer_lcd.write("%2d bonger har blitt trukket" % amount)
 
 
 def countdown(seconds):
-    for i in range(1, seconds+1):
+    for i in reversed(range(1, seconds+1)):
         customer_lcd.set_pointer(14, 1)
         customer_lcd.write("%2d" % i)
+        bar_lcd.set_pointer(18, 0)
+        bar_lcd.write("%2d" % i)
         time.sleep(1)
 
 if __name__ == "__main__":
@@ -115,12 +119,10 @@ if __name__ == "__main__":
             continue
         display_info(customer)
 
-        # TODO: Make the physical intraface for this
         amount = get_amount()
         if amount is 0:
             continue
 
-        # TODO: Submit to internsystem
         register_use(customer, amount)
 
         # Give people some time to read
