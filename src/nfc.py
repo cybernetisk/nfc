@@ -23,7 +23,7 @@ api = None
 
 
 class Customer:
-    def __init__(self, username="", name="", vouchers=0, coffee_vouchers=0):
+    def __init__(self, username, name, vouchers, coffee_vouchers):
         self.username = username
         self.name = name
         self.vouchers = vouchers
@@ -80,19 +80,26 @@ def get_customer(card_id):
 
 
 def display_info(customer):
-    customer_output = "Du har %2d bonger" % customer.vouchers
+    output = []
+    if customer.name:
+        output += ["Name: %s" % customer.name]
+    if customer.vouchers != 0:
+        output += ["Bonger: %2d" % customer.vouchers]
     if customer.coffee != 0:
-        customer_output += " og %2d kaffer" % customer.coffee
-
-    customer_lcd.clean()
-    customer_lcd.write(customer_output)
+        output += ["Kaffe: %2d" % customer.coffee]
 
     bar_lcd.clean()
-    bar_lcd.write("Navn: %s" % customer.name)
-    bar_lcd.set_pointer(0, 1)
-    bar_lcd.write("Bonger: %s" % customer.vouchers)
-    bar_lcd.set_pointer(0, 2)
-    bar_lcd.write("Kaffe: %s" % customer.coffee)
+    for i in range(len(output)):
+        bar_lcd.set_pointer(0, i)
+        bar_lcd.write(output[i])
+    
+    # We don't want to display the name on the customer screen
+    if customer.name:
+        output.pop(0)
+    customer_lcd.clean()
+    for i in range(len(output)):
+        customer_lcd.set_pointer(0, 1)
+        customer_lcd.write(output[i])
 
 
 def get_amount():
@@ -101,7 +108,7 @@ def get_amount():
 
     while not GPIO.input(enter_button):
         bar_lcd.set_pointer(0, 3)
-        bar_lcd.write("Antall bonger: %2d" % amount)
+        bar_lcd.write("Antall a fjerne: %2d" % amount)
         
         if GPIO.input(cancel_button):
             return 0
@@ -142,7 +149,7 @@ if __name__ == "__main__":
 
         # Display info about the customer
         display_info(customer)
-        
+
         # Get amount of bongs to remove
         amount = get_amount()
         if amount is 0:
