@@ -23,11 +23,11 @@ api = None
 
 
 class Customer:
-    def __init__(self, username, name, vouchers, coffee):
-        self.id = username
+    def __init__(self, username="", name="", vouchers=0, coffee_vouchers=0):
+        self.username = username
         self.name = name
         self.vouchers = vouchers
-        self.coffee = coffee
+        self.coffee_vouchers = coffee_vouchers
 
 
 def setup():
@@ -68,10 +68,13 @@ def get_card_id():
 
 
 def get_customer(card_id):
-    # FIXME: Doesn't work correctly due to the db storing cardnumbers, not uid.
     username, name = api.get_card_owner(card_id)
-    vouchers = api.get_voucher_balance(username)
-    coffee_vouchers = 0 # Not implemented in intern system yet
+
+    vouchers = 0
+    # A NFC card might only be used as a coffee card.
+    if username:
+        vouchers = api.get_voucher_balance(username)
+    coffee_vouchers = api.get_coffee_voucher_balance(card_id)
 
     return Customer(username, name, vouchers, coffee_vouchers)
 

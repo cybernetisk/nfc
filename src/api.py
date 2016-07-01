@@ -39,14 +39,14 @@ class CybApi:
         print(card_id)
         # FIXME: The card_id is not the ID we expect.
 
-        url = self._base_url + "api/core/cards"
-        params = {"format": "json", "card_number": card_id}
+        url = self._base_url + "api/core/nfc"
+        params = {"format": "json", "card_uid": card_id}
 
         request = self._client.get(url, params=params)
         json = request.json()
 
         if not json:
-            return (None, None)
+            return ("", "")
 
         return (json["user"]["username"], json["user"]["realname"])
 
@@ -66,6 +66,11 @@ class CybApi:
                 balance += float(wallet["cached_balance"])
 
         return balance
+
+
+    def get_coffee_voucher_balance(self, card_uid):
+        # TODO: Not implemented in internsystem yet
+        return 0
 
 
     def remove_bongs(self, username, amount):
