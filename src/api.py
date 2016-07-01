@@ -73,9 +73,13 @@ class CybApi:
         return 0
 
 
-    def remove_bongs(self, username, amount):
-        pass
+    def use_vouchers(self, username, amount):
+        url = self._base_url + "api/voucher/users/" + username + "/use_vouchers"
+        data = {"vouchers": amount}
 
+        request = self._client.post(url, data=data)
 
-    def add_card(self, card_id, username):
-        pass
+        if request.status_code is 200:
+            return True
+        else:
+            return False

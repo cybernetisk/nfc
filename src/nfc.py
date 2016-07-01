@@ -125,9 +125,18 @@ def get_amount():
 
 
 def register_use(customer, amount):
-    # TODO: Registrer bonger
     customer_lcd.clean()
-    customer_lcd.write("%2d bonger trukket" % amount)
+    bar_lcd.clean()
+    customer_lcd.write("Trekker %2d bonger" % amount)
+    bar_lcd.write("Trekker %2d bonger fra %s" % (amount, customer.username))
+
+    customer_lcd.clean()
+    bar_lcd.clean()
+    if use_vouchers(customer.username, amount):
+        customer_lcd.write("%2d bonger trukket" % amount)
+    else:
+        customer_lcd.write("Du har ikke nok bonger")
+        bar_lcd.write("Kunden har ikke nok bonger")
 
 
 def countdown(seconds):
