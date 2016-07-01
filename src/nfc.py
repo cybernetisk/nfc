@@ -1,8 +1,11 @@
 #!/bin/python3
+import sys
 import time
+import configparser
 import RPi.GPIO as GPIO
 
 import nfc
+from api import CybApi
 from lcd import LcdDisplay
 
 # Input pins
@@ -15,20 +18,31 @@ bus_id = 1
 # Host address of the LCD display
 bar_lcd = LcdDisplay(0x28, bus_id) # Large display
 customer_lcd = LcdDisplay(0x27,bus_id) # Small display
-# Internsystem authentication stuff
-# TODO: Make it use a config
-username = "tmp"
-password = "tmp"
+# API for internsystem
+api = None
 
 
 class Customer:
-    def __init__(self, name, vouchers, coffee):
+    def __init__(self, username, name, vouchers, coffee):
+        self.id = username
         self.name = name
         self.vouchers = vouchers
         self.coffee = coffee
 
 
 def setup():
+    # Get the config
+    config = configparser.ConfigParser()
+    config.read(sys.argv[1])
+
+    # Get the API ready
+    global api
+    api_config = config._sections["api"]
+    api = CybApi(
+            api_config["username"], api_config["password"],
+            api_config["client_id"], api_config["client_secret"]
+    )
+
     # Get the LCD screen ready
     for lcd in bar_lcd, customer_lcd:
         lcd.clean()
@@ -54,8 +68,12 @@ def get_card_id():
 
 
 def get_customer(card_id):
-    # TODO: Interact with internsystem
-    return Customer("Nicolas", 10, 2)
+    # FIXME: Doesn't work correctly due to the db storing cardnumbers, not uid.
+    username, name = api.get_card_owner(card_id)
+    vouchers = api.get_voucher_balance(username)
+    coffee_vouchers = 0 # Not implemented in intern system yet
+
+    return Customer(username, name, vouchers, coffee_vouchers)
 
 
 def display_info(customer):
@@ -76,6 +94,7 @@ def display_info(customer):
 
 def get_amount():
     amount = 0
+    active_button = None # To avoid adding/removing multiple bong in one press.
 
     while not GPIO.input(enter_button):
         bar_lcd.set_pointer(0, 3)
@@ -83,22 +102,22 @@ def get_amount():
         
         if GPIO.input(cancel_button):
             return 0
-        elif GPIO.input(pluss_button):
+        elif GPIO.input(pluss_button) and active_button is not pluss_button:
             amount += 1
-        elif GPIO.input(minus_button) and amount > 0:
+            active_button = pluss_button
+        elif GPIO.input(minus_button) and active_button is not minus_button and amount > 0:
             amount -= 1
+            active_button = minus_button
+        else:
+            active_button = None
         
-        # FIXME: Buttons sometimes register double, or not at all.
-        # Sleep to not register buttons multiple times
-        time.sleep(0.1)
-
     return amount
 
 
 def register_use(customer, amount):
     # TODO: Registrer bonger
     customer_lcd.clean()
-    customer_lcd.write("%2d bonger har blitt trukket" % amount)
+    customer_lcd.write("%2d bonger trukket" % amount)
 
 
 def countdown(seconds):
@@ -117,12 +136,16 @@ if __name__ == "__main__":
         customer = get_customer(get_card_id())
         if customer is None:
             continue
-        display_info(customer)
 
+        # Display info about the customer
+        display_info(customer)
+        
+        # Get amount of bongs to remove
         amount = get_amount()
         if amount is 0:
             continue
 
+        # Remove x amount of bongs from customer
         register_use(customer, amount)
 
         # Give people some time to read
