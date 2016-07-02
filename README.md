@@ -5,7 +5,6 @@ Mer informasjon ligger på den interne wikien til CYB:
 https://confluence.cyb.no/x/FIBz
 
 ## Overordnet info
-
 Raspberry Pi kommuniserer med NFC-leser og LCD-displays over I2C-protokollen.
 For å støtte NFC-leseren må vi sette opp libnfc, se nedenfor.
 
@@ -20,32 +19,22 @@ libnfc. Derfor har vi laget bindinger fra Python til C, slik at vi kan eksporter
 funksjoner i C som bruker libnfc til Python. På denne måten kan vi lese fra NFC-chippen
 i Python.
 
-
-## Sette opp
-
-### Nødvendig utstyr
+## Dependencies
+### Utstyr
 * Raspberry Pi 2 Model B
 * 2x LCD Skjerm
 * NFC Leser
 
-### Nødvendige pakker på maskinen
-Alle pakker blir installert med ``setup.sh``, så det er ikke nødvendig å installere noe manuelt.
-
-Installeres med apt-get:
+### Pakker
 * i2c-tools
-* python-smbus
-* git-core
-
-Tror også man trenger:
-* cmake
+* pyton-smbus
+* python-dev
 * autoconf
 * libtool
-* python-dev
+* cmake
 
-### Gjøre klar for kjøring
-For å kommunisere med NFC-chippen, benytter vi oss av [libnfc](https://github.com/nfc-tools/libnfc).
-
-NB! Dette er ikke testet slik det står her, så mulig det må noen tilpasninger til for at det skal funke.
+## Oppsett
+For å sette opp Raspberry Pi-en, må man gjøre følgende:
 
 ```bash
 # Kjør setup-scripten
@@ -59,21 +48,26 @@ i2cdetect -y 1
 nfc-list
 ```
 
-Ved problemer med oppsett av I2C-portene, se [Using the I2C Interface](http://www.raspberry-projects.com/pi/programming-in-python/i2c-programming-in-python/using-the-i2c-interface-2).
+Ved problemer med oppsett av I2C-portene, se [Using the I2C Interface](http://www.raspberry-projects.com/pi/programming-in-python/i2c-programming-in-python/using-the-i2c-interface-2). Det kan også være en ide å koble inn og ut strømmen til enhetene.
+
+Etter dette er gjort kjører man ved å kjøre ``start.sh``.
+
+## Annet
+### Config fil oppsett
+Config filen til prosjektet inneholder det som trengs for å autentisere mot internsystemet. Alt man trenger kan hentes fra OAuth2 panelet i django admin.
+
+```ini
+[api]
+username=<username>
+password=<password>
+client_id=<client_id>
+client_secret=<client_secret>
+```
 
 ### Kompilere Python-binding mot libnfc
-Dette skal være ganske rett frem.
+Dette blir gjort i ``setup.sh``, men hvis man sletter bindingen, må det gjøres på nytt.
 
-I hovedmappa til dette Git-repoet:
-
-```bash
-make
-```
-
-### Kjøre testen
-```bash
-python prototype.py
-```
+For å kompilere, er det bare å gå i hovedmappa og kjøre ``make``.
 
 ### Starte automatisk på Pi-en
 For å få til dette kan man lage et enkelt init-script:
@@ -86,7 +80,7 @@ Legg til innholdet:
 ```
 case "$1" in
         start)
-                python ~pi/nfc/prototype.py &
+                sh <nfc prosjekt mappa>/start.sh &
                 ;;
 esac
 ```
