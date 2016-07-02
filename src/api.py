@@ -79,7 +79,9 @@ class CybApi:
 
         request = self._client.post(url, data=data)
 
-        if request.status_code is 200:
+        if request.status_code == 201:
             return True
-        else:
+        elif request.status_code == 402:
             return False
+        else:
+            print(str(request.status_code) + "\n" + str(request.content))

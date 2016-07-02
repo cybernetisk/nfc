@@ -31,6 +31,12 @@ class Customer:
 
 
 def setup():
+    # Get the LCD screen ready
+    for lcd in bar_lcd, customer_lcd:
+        lcd.clean()
+        lcd.tick_off()
+        lcd.write("Laster systemet!")
+
     # Get the config
     config = configparser.ConfigParser()
     config.read(sys.argv[1])
@@ -42,12 +48,6 @@ def setup():
             api_config["username"], api_config["password"],
             api_config["client_id"], api_config["client_secret"]
     )
-
-    # Get the LCD screen ready
-    for lcd in bar_lcd, customer_lcd:
-        lcd.clean()
-        lcd.tick_off()
-        lcd.write("Laster systemet...")
 
     # Get the bong amount inputs ready
     GPIO.setmode(GPIO.BOARD)
@@ -66,7 +66,7 @@ def get_card_id():
 
 
 def get_customer(card_id):
-    username, name = api.get_card_owner(card_id)
+    username, name = ("nfc_systemet", "NFC") #api.get_card_owner(card_id)
 
     vouchers = 0
     # A NFC card might only be used as a coffee card.
@@ -78,18 +78,18 @@ def get_customer(card_id):
 
 
 def display_info(customer):
-    output = []
+    output = ""
     if customer.name:
-        output += ["Name: %s" % customer.name]
+        output += "Name: %s\n" % customer.username
     if customer.vouchers != 0:
-        output += ["Bonger: %2d" % customer.vouchers]
-    if customer.coffee != 0:
-        output += ["Kaffe: %2d" % customer.coffee_vouchers]
+        output += "Bonger: %2d\n" % customer.vouchers
+    if customer.coffee_vouchers != 0:
+        output += "Kaffe: %2d" % customer.coffee_vouchers
 
     write(bar_lcd, output)
     # We don't want to display the name on the customer screen
     if customer.name:
-        output.pop(0)
+        output = output[output.find("\n")+1:]
     write(customer_lcd, output)
 
 
@@ -98,7 +98,7 @@ def get_amount():
     active_button = None # To avoid adding/removing multiple bong in one press.
 
     while not GPIO.input(enter_button):
-        write(bar_lcd, "Antall a fjerne: %2d" % amount, start_position=3)
+        write(bar_lcd, "Antall a fjerne: %2d" % amount, clean=False, start_position=3)
         
         if GPIO.input(cancel_button):
             return 0
@@ -116,11 +116,11 @@ def get_amount():
 
 def register_use(customer, amount):
     for lcd in bar_lcd, customer_lcd:
-        write(lcd, "Trekker %2d bonger" % amount)
+        write(lcd, "Trekker %d bonger" % amount)
 
-    if use_vouchers(customer.username, amount):
+    if api.use_vouchers(customer.username, amount):
         for lcd in bar_lcd, customer_lcd:
-            write(lcd, "%2d bonger trukket" % amount)
+            write(lcd, "%d bonger trukket" % amount)
     else:
         write(customer_lcd, "Du har ikke nok bonger")
         write(bar_lcd, "Kunden har ikke nok bonger")
@@ -129,9 +129,9 @@ def register_use(customer, amount):
 def countdown(seconds):
     for i in reversed(range(1, seconds+1)):
         customer_lcd.set_pointer(14, 1)
-        customer_lcd.write("%2d" % i)
+        customer_lcd.write("%d" % i)
         bar_lcd.set_pointer(18, 0)
-        bar_lcd.write("%2d" % i)
+        bar_lcd.write("%d" % i)
         time.sleep(1)
 
 if __name__ == "__main__":
