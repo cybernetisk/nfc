@@ -3,29 +3,24 @@ import sys
 import time
 import configparser
 import RPi.GPIO as GPIO
+import readchar
 
 import nfc
+from constants import *
 from api import CybApi
-from lcd import LcdDisplay, write
+from lcd import LcdDisplay, write, menu
 
-# Input pins
-cancel_button = 37
-enter_button = 35
-pluss_button = 33
-minus_button = 31
-# The i2c bus id
-bus_id = 1
 # Host address of the LCD display
-bar_lcd = LcdDisplay(0x28, bus_id) # Large display
-customer_lcd = LcdDisplay(0x27,bus_id) # Small display
+bar_lcd = LcdDisplay(0x28, BUS_ID) # Large display
+customer_lcd = LcdDisplay(0x27, BUS_ID) # Small display
 # API for internsystem
 api = None
 
 
 class Customer:
-    def __init__(self, username, name, vouchers, coffee_vouchers):
+    def __init__(self, username, is_intern, vouchers, coffee_vouchers):
         self.username = username
-        self.name = name
+        self.intern = is_intern
         self.vouchers = vouchers
         self.coffee_vouchers = coffee_vouchers
 
@@ -33,8 +28,8 @@ class Customer:
 def setup():
     # Get the LCD screen ready
     for lcd in bar_lcd, customer_lcd:
-        lcd.clean()
         lcd.tick_off()
+        lcd.clean()
         lcd.write("Laster systemet!")
 
     # Get the config
@@ -51,7 +46,7 @@ def setup():
 
     # Get the bong amount inputs ready
     GPIO.setmode(GPIO.BOARD)
-    for pin in cancel_button, enter_button, pluss_button, minus_button:
+    for pin in CANCEL_BUTTON, ENTER_BUTTON, PLUSS_BUTTON, MINUS_BUTTON:
         GPIO.setup(pin, GPIO.IN)
 
     # Initialize the NFC reader
@@ -60,54 +55,138 @@ def setup():
 
 def get_card_id():
     for lcd in bar_lcd, customer_lcd:
+        time.sleep(0.05) # If there was a loop previously, this prevents the screen from becomming blank
         write(lcd, "Venter pa kort")
 
     return nfc.getid()
 
 
-def get_customer(card_id):
-    username, name = ("nfc_systemet", "NFC") #api.get_card_owner(card_id)
+def get_keyboard_input(prompt):
+    output = prompt + "\n> "
+    value = ""
+
+
+    for lcd in bar_lcd, customer_lcd:
+        lcd.clean()
+        lcd.tick_on()
+    while not GPIO.input(ENTER_BUTTON):
+        for lcd in bar_lcd, customer_lcd:
+            write(lcd, output)
+
+        char = readchar.readchar()
+        if char == readchar.key.ENTER:
+            break
+        elif char == readchar.key.BACKSPACE:
+            output = output[:-1]
+            value = value[:-1]
+        else:
+            output += char
+            value += char
+
+    for lcd in bar_lcd, customer_lcd:
+        lcd.tick_off()
+
+    return value
+
+
+def register_customer(card_uid):
+    username = ""
+    user_id = ""
+    is_intern = False
+
+    choice = menu(
+            bar_lcd,
+            "Er personen intern?",
+            ("Ja", "Nei")
+    )
+    if choice is "Ja":
+        # TODO: Check if username actually exists
+        is_intern = True
+        user = None
+        while True:
+            username = get_keyboard_input("Brukernavn")
+            if not username:
+                return (None, None) # Empty username means cancel
+
+            user = api.get_user(username)
+            if "detail" in user: # If there is a detail, it means that we didn't get a match.
+                for lcd in bar_lcd, customer_lcd:
+                    write(lcd, "Brukeren finnes ikke")
+                time.sleep(3) # Give user some time to read
+            else:
+                break
+    elif choice is None:
+        return (None, None)
+
+    for lcd in bar_lcd, customer_lcd:
+        write(lcd, "Registerer kort")
+    if api.register_card(card_uid, user_id, is_intern):
+        for lcd in bar_lcd, customer_lcd:
+            write(lcd, "Kort registrert!")
+        time.sleep(4)
+
+    return (username, is_intern)
+
+
+def get_customer(card_uid):
+    username, is_intern = api.get_card_info(card_uid)
+
+    if username is None:
+        write(customer_lcd, "Ikke gjenkjent")
+        choice = menu(
+                bar_lcd,
+                "Kort ikke gjenkjent",
+                ("Register", "Kanseler")
+        )
+        if choice is "Kanseler" or None:
+            return None
+
+        username, is_intern = register_customer(card_uid)
+        if username is None:
+            return None
 
     vouchers = 0
     # A NFC card might only be used as a coffee card.
     if username:
         vouchers = api.get_voucher_balance(username)
-    coffee_vouchers = api.get_coffee_voucher_balance(card_id)
+    coffee_vouchers = api.get_coffee_voucher_balance(card_uid)
 
-    return Customer(username, name, vouchers, coffee_vouchers)
+    return Customer(username, is_intern, vouchers, coffee_vouchers)
 
 
 def display_info(customer):
     output = ""
-    if customer.name:
+
+    if customer.intern:
         output += "Name: %s\n" % customer.username
-    if customer.vouchers != 0:
         output += "Bonger: %2d\n" % customer.vouchers
-    if customer.coffee_vouchers != 0:
-        output += "Kaffe: %2d" % customer.coffee_vouchers
+    output += "Kaffe: %2d" % customer.coffee_vouchers
 
     write(bar_lcd, output)
-    # We don't want to display the name on the customer screen
-    if customer.name:
+    # We don't want to display the username on the customer screen
+    if customer.intern:
         output = output[output.find("\n")+1:]
     write(customer_lcd, output)
 
 
+# TODO: Figure out a way to make this function use lcd.menu(), since they're more or less the same thing.
 def get_amount():
     amount = 0
     active_button = None # To avoid adding/removing multiple bong in one press.
 
-    while not GPIO.input(enter_button):
-        write(bar_lcd, "Antall a fjerne: %2d" % amount, clean=False, start_position=3)
+    while not GPIO.input(ENTER_BUTTON):
+        time.sleep(0.05) # Without this, the screen will clear when writing
+        bar_lcd.set_pointer(0, 3)
+        bar_lcd.write("Antall a fjerne: %2d" % amount)
         
-        if GPIO.input(cancel_button):
+        if GPIO.input(CANCEL_BUTTON):
             return 0
-        elif GPIO.input(pluss_button) and active_button is not pluss_button:
+        elif GPIO.input(PLUSS_BUTTON) and active_button is not PLUSS_BUTTON:
             amount += 1
-            active_button = pluss_button
-        elif GPIO.input(minus_button) and active_button is not minus_button and amount > 0:
+            active_button = PLUSS_BUTTON
+        elif GPIO.input(MINUS_BUTTON) and active_button is not MINUS_BUTTON and amount > 0:
             amount -= 1
-            active_button = minus_button
+            active_button = MINUS_BUTTON
         else:
             active_button = None
         
@@ -125,14 +204,6 @@ def register_use(customer, amount):
         write(customer_lcd, "Du har ikke nok bonger")
         write(bar_lcd, "Kunden har ikke nok bonger")
 
-
-def countdown(seconds):
-    for i in reversed(range(1, seconds+1)):
-        customer_lcd.set_pointer(14, 1)
-        customer_lcd.write("%d" % i)
-        bar_lcd.set_pointer(18, 0)
-        bar_lcd.write("%d" % i)
-        time.sleep(1)
 
 if __name__ == "__main__":
     setup()
@@ -155,4 +226,4 @@ if __name__ == "__main__":
         register_use(customer, amount)
 
         # Give people some time to read
-        countdown(5)
+        time.sleep(5)

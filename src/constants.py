@@ -1,0 +1,7 @@
+# Input pins
+CANCEL_BUTTON = 37
+ENTER_BUTTON = 35
+PLUSS_BUTTON = 33
+MINUS_BUTTON = 31
+# i2c bus id
+BUS_ID = 1
