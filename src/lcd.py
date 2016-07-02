@@ -32,3 +32,13 @@ class LcdDisplay:
     def new_i2c_addr(self, new_addr):
         # new_addr e.g. 0x28
         self.raw("SI2CA%c" % new_addr)
+
+
+def write(lcd, text, clean=True, start_position=0):
+    if clean:
+        lcd.clean()
+
+    text = text.splitlines()
+    for i in range(len(text)):
+        lcd.set_pointer(0, i+start_position)
+        lcd.write(text[i])

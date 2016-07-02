@@ -6,7 +6,7 @@ import RPi.GPIO as GPIO
 
 import nfc
 from api import CybApi
-from lcd import LcdDisplay
+from lcd import LcdDisplay, write
 
 # Input pins
 cancel_button = 37
@@ -59,10 +59,8 @@ def setup():
 
 
 def get_card_id():
-    bar_lcd.clean()
-    bar_lcd.write("Venter pa kort")
-    customer_lcd.clean()
-    customer_lcd.write("Venter pa kort")
+    for lcd in bar_lcd, customer_lcd:
+        write(lcd, "Venter pa kort")
 
     return nfc.getid()
 
@@ -86,20 +84,13 @@ def display_info(customer):
     if customer.vouchers != 0:
         output += ["Bonger: %2d" % customer.vouchers]
     if customer.coffee != 0:
-        output += ["Kaffe: %2d" % customer.coffee]
+        output += ["Kaffe: %2d" % customer.coffee_vouchers]
 
-    bar_lcd.clean()
-    for i in range(len(output)):
-        bar_lcd.set_pointer(0, i)
-        bar_lcd.write(output[i])
-    
+    write(bar_lcd, output)
     # We don't want to display the name on the customer screen
     if customer.name:
         output.pop(0)
-    customer_lcd.clean()
-    for i in range(len(output)):
-        customer_lcd.set_pointer(0, 1)
-        customer_lcd.write(output[i])
+    write(customer_lcd, output)
 
 
 def get_amount():
@@ -107,8 +98,7 @@ def get_amount():
     active_button = None # To avoid adding/removing multiple bong in one press.
 
     while not GPIO.input(enter_button):
-        bar_lcd.set_pointer(0, 3)
-        bar_lcd.write("Antall a fjerne: %2d" % amount)
+        write(bar_lcd, "Antall a fjerne: %2d" % amount, start_position=3)
         
         if GPIO.input(cancel_button):
             return 0
@@ -125,18 +115,15 @@ def get_amount():
 
 
 def register_use(customer, amount):
-    customer_lcd.clean()
-    bar_lcd.clean()
-    customer_lcd.write("Trekker %2d bonger" % amount)
-    bar_lcd.write("Trekker %2d bonger fra %s" % (amount, customer.username))
+    for lcd in bar_lcd, customer_lcd:
+        write(lcd, "Trekker %2d bonger" % amount)
 
-    customer_lcd.clean()
-    bar_lcd.clean()
     if use_vouchers(customer.username, amount):
-        customer_lcd.write("%2d bonger trukket" % amount)
+        for lcd in bar_lcd, customer_lcd:
+            write(lcd, "%2d bonger trukket" % amount)
     else:
-        customer_lcd.write("Du har ikke nok bonger")
-        bar_lcd.write("Kunden har ikke nok bonger")
+        write(customer_lcd, "Du har ikke nok bonger")
+        write(bar_lcd, "Kunden har ikke nok bonger")
 
 
 def countdown(seconds):
