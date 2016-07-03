@@ -181,20 +181,24 @@ def display_info(customer):
 # TODO: Figure out a way to make this function use lcd.menu(), since they're more or less the same thing.
 def get_amount():
     amount = 0
+    prev_amount = None
     active_button = None # To avoid adding/removing multiple bong in one press.
 
     while not GPIO.input(ENTER_BUTTON):
-        time.sleep(0.05) # Without this, the screen will clear when writing
-        bar_lcd.set_pointer(0, 3)
-        bar_lcd.write("Antall a fjerne: %2d" % amount)
+        if amount is not prev_amount:
+            time.sleep(0.05)
+            prev_amount = amount
+            write(bar_lcd, "Antall a fjerne: %2d" % amount, clean=False, start_position=3)
         
         if GPIO.input(CANCEL_BUTTON):
             return 0
-        elif GPIO.input(PLUSS_BUTTON) and active_button is not PLUSS_BUTTON:
-            amount += 1
+        elif GPIO.input(PLUSS_BUTTON):
+            if active_button is not PLUSS_BUTTON:
+                amount += 1
             active_button = PLUSS_BUTTON
-        elif GPIO.input(MINUS_BUTTON) and active_button is not MINUS_BUTTON and amount > 0:
-            amount -= 1
+        elif GPIO.input(MINUS_BUTTON) and amount > 0:
+            if active_button is not MINUS_BUTTON:
+                amount -= 1
             active_button = MINUS_BUTTON
         else:
             active_button = None
@@ -224,7 +228,6 @@ if __name__ == "__main__":
             continue
 
         # Display info about the customer
-        print("%s %s" % (customer.username, customer.intern))
         display_info(customer)
 
         # Get amount of bongs to remove

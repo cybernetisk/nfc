@@ -64,20 +64,26 @@ def menu(lcd, description, choices):
 
         if GPIO.input(CANCEL_BUTTON):
             return None
-        elif GPIO.input(PLUSS_BUTTON) and active_button is not PLUSS_BUTTON:
+        elif GPIO.input(PLUSS_BUTTON):
+            # Make sure input doesn't go crazy
+            if active_button is PLUSS_BUTTON:
+                continue
             active_button = PLUSS_BUTTON
-            if active_choice < len(choices):
+
+            if active_choice < len(choices) - 1:
                 active_choice += 1
             else:
-                # Wrap to the start
-                active_choice = 0
-        elif GPIO.input(MINUS_BUTTON) and active_button is not MINUS_BUTTON:
+                active_choice = 0 # Wrap to start
+        elif GPIO.input(MINUS_BUTTON):
+            # Make sure input doesn't go crazy
+            if active_button is MINUS_BUTTON:
+                continue
             active_button = MINUS_BUTTON
+
             if active_choice > 0:
                 active_choice -= 1
             else:
-                # Wrap to end
-                active_choice = len(choices) - 1
+                active_choice = len(choices) - 1 # Wrap to end
         else:
             active_button = None
 
