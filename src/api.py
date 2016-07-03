@@ -59,9 +59,9 @@ class CybApi:
             return ("", json["intern"])
         return (json["user"]["username"], json["intern"])
 
-    def register_card(self, card_uid, username="", is_intern=False, comment=""):
+    def register_card(self, card_uid, user_id=None, is_intern=False, comment=""):
         url = self._base_url + "api/core/nfc"
-        data = {"card_uid": card_uid, "user": username, "intern": is_intern, "comment": comment}
+        data = {"card_uid": card_uid, "user": user_id, "intern": is_intern, "comment": comment}
 
         request = self._client.post(url, data=data, verify=False)
 

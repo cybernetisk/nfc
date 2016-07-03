@@ -1,9 +1,10 @@
 #!/bin/python3
 import sys
 import time
+import string
 import configparser
+import curses
 import RPi.GPIO as GPIO
-import readchar
 
 import nfc
 from constants import *
@@ -62,29 +63,36 @@ def get_card_id():
 
 
 def get_keyboard_input(prompt):
+    screen = curses.initscr()
+    screen.nodelay(True) # Prevents getch() from blocking
     output = prompt + "\n> "
     value = ""
-
+    prev_value = None
 
     for lcd in bar_lcd, customer_lcd:
         lcd.clean()
         lcd.tick_on()
     while not GPIO.input(ENTER_BUTTON):
-        for lcd in bar_lcd, customer_lcd:
-            write(lcd, output)
+        if value is not prev_value:
+            prev_value = value
+            for lcd in bar_lcd, customer_lcd:
+                write(lcd, output + value)
 
-        char = readchar.readchar()
-        if char == readchar.key.ENTER:
+        char = screen.getch()
+        if GPIO.input(CANCEL_BUTTON) or char == 27: # Escape Key
+            value = None
             break
-        elif char == readchar.key.BACKSPACE:
-            output = output[:-1]
+        elif char == 10: # Enter Key
+            break
+        elif char == 127: # Backspace
             value = value[:-1]
-        else:
-            output += char
-            value += char
+        elif char is not curses.ERR and str(chr(char)) in "".join([string.ascii_letters, string.digits, ".-_"]):
+            value += str.lower(str(chr(char)))
 
+    # Cleanup
     for lcd in bar_lcd, customer_lcd:
         lcd.tick_off()
+    curses.endwin()
 
     return value
 
@@ -112,8 +120,9 @@ def register_customer(card_uid):
             if "detail" in user: # If there is a detail, it means that we didn't get a match.
                 for lcd in bar_lcd, customer_lcd:
                     write(lcd, "Brukeren finnes ikke")
-                time.sleep(3) # Give user some time to read
+                time.sleep(2) # Give user some time to read
             else:
+                user_id = user["id"]
                 break
     elif choice is None:
         return (None, None)
@@ -123,7 +132,7 @@ def register_customer(card_uid):
     if api.register_card(card_uid, user_id, is_intern):
         for lcd in bar_lcd, customer_lcd:
             write(lcd, "Kort registrert!")
-        time.sleep(4)
+        time.sleep(2)
 
     return (username, is_intern)
 
@@ -136,7 +145,7 @@ def get_customer(card_uid):
         choice = menu(
                 bar_lcd,
                 "Kort ikke gjenkjent",
-                ("Register", "Kanseler")
+                ("Register", "Avbryt")
         )
         if choice is "Kanseler" or None:
             return None
@@ -215,6 +224,7 @@ if __name__ == "__main__":
             continue
 
         # Display info about the customer
+        print("%s %s" % (customer.username, customer.intern))
         display_info(customer)
 
         # Get amount of bongs to remove
