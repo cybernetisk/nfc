@@ -53,13 +53,13 @@ def write(lcds, text, clean=True, start_position=0):
 
 class _Menu:
     def __init__(self, lcds, clean=True, position=0):
-        self.lcd = lcd
+        self.lcds = lcds
         self.clean = clean
         self.position = position
 
         if clean:
             for lcd in lcds:
-                self.lcd.clean()
+                lcd.clean()
         else:
             time.sleep(0.05) # If we're not cleaning, then we'll need a delay to not accidentially clean the screen
 
@@ -90,10 +90,11 @@ class _Menu:
             output = self._lcd_output(active_choice)
             if output != prev_output:
                 prev_output = output
-                write(self.lcd, output, self.clean, self.position)
+                write(self.lcds, output, self.clean, self.position)
 
             if GPIO.input(CANCEL_BUTTON):
-                return None
+                active_choice = None
+                break
             elif GPIO.input(PLUSS_BUTTON):
                 if active_button is PLUSS_BUTTON:
                     continue
@@ -110,7 +111,7 @@ class _Menu:
 
         self._clean_up()
         # The enter button is usually held for a few more ms, causing later options to get automatically selected.
-        while GPIO.input(ENTER_BUTTON):
+        while GPIO.input(ENTER_BUTTON) or GPIO.input(CANCEL_BUTTON):
             pass
         return self._return_action(active_choice)
 
@@ -145,6 +146,8 @@ class ChoiceMenu(_Menu):
             return len(self.choices) - 1 # Wrap to end
 
     def _return_action(self, active_choice):
+        if active_choice is None:
+            return active_choice
         return self.choices[active_choice]
 
 
@@ -187,6 +190,6 @@ class KeyboardMenu(_Menu):
             return current_value
 
     def _clean_up(self):
-        for lcd in lcds:
-            self.lcd.tick_off()
+        for lcd in self.lcds:
+            lcd.tick_off()
         curses.endwin()

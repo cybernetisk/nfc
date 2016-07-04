@@ -64,7 +64,7 @@ def register_customer(card_uid):
     user_id = ""
     is_intern = False
 
-    choice = ChoiceMenu(bar_lcd, "Er personen intern?", ("Ja", "Nei")).menu()
+    choice = ChoiceMenu((bar_lcd,), "Er personen intern?", ("Ja", "Nei")).menu()
     if choice is "Ja":
         is_intern = True
         while not user_id:
@@ -88,14 +88,15 @@ def register_customer(card_uid):
 
     return (username, is_intern)
 
+
 def get_customer(card_uid):
     username, is_intern = api.get_card_info(card_uid)
 
     # The card is not in the database
     if username is None:
         write((customer_lcd,), "Ikke gjenkjent")
-        choice = ChoiceMenu(bar_lcd, "Kort ikke gjenkjent", ("Register", "Avbryt")).menu()
-        if choice is "Kanseler" or None:
+        choice = ChoiceMenu((bar_lcd,), "Kort ikke gjenkjent", ("Register", "Avbryt")).menu()
+        if choice is "Avbryt" or choice is None:
             return None
 
         username, is_intern = register_customer(card_uid)
