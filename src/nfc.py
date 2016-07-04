@@ -53,9 +53,8 @@ def setup():
 
 
 def get_card_id():
-    for lcd in bar_lcd, customer_lcd:
-        time.sleep(0.05) # If there was a loop previously, this prevents the screen from becomming blank
-        write(lcd, "Venter pa kort")
+    time.sleep(0.05) # If there was a loop previously, this prevents the screen from becomming blank
+    write((bar_lcd, customer_lcd), "Venter pa kort")
 
     return nfc.getid()
 
@@ -67,38 +66,34 @@ def register_customer(card_uid):
 
     choice = ChoiceMenu(bar_lcd, "Er personen intern?", ("Ja", "Nei")).menu()
     if choice is "Ja":
-        # TODO: Check if username actually exists
         is_intern = True
         while not user_id:
-            username = KeyboardMenu(bar_lcd, "Brukernavn").menu()
+            username = KeyboardMenu((bar_lcd, customer_lcd), "Brukernavn").menu()
             if not username:
                 return (None, None) # Empty username means cancel
 
             user = api.get_user(username)
             if "detail" in user: # If there is a detail, it means that we didn't get a match.
-                for lcd in bar_lcd, customer_lcd:
-                    write(lcd, "Brukeren finnes ikke")
+                write((bar_lcd, customer_lcd), "Brukeren finnes ikke")
                 time.sleep(2) # Give user some time to read
             else:
                 user_id = user["id"]
     elif choice is None:
         return (None, None)
 
-    for lcd in bar_lcd, customer_lcd:
-        write(lcd, "Registerer kort")
+    write((bar_lcd, customer_lcd), "Registerer kort")
     if api.register_card(card_uid, user_id, is_intern):
-        for lcd in bar_lcd, customer_lcd:
-            write(lcd, "Kort registrert!")
-        time.sleep(2)
+        write((bar_lcd, customer_lcd), "Kort registrert!")
+        time.sleep(2) # Give the user some time to read
 
     return (username, is_intern)
-
 
 def get_customer(card_uid):
     username, is_intern = api.get_card_info(card_uid)
 
+    # The card is not in the database
     if username is None:
-        write(customer_lcd, "Ikke gjenkjent")
+        write((customer_lcd,), "Ikke gjenkjent")
         choice = ChoiceMenu(bar_lcd, "Kort ikke gjenkjent", ("Register", "Avbryt")).menu()
         if choice is "Kanseler" or None:
             return None
@@ -124,23 +119,20 @@ def display_info(customer):
         output += "Bonger: %2d\n" % customer.vouchers
     output += "Kaffe: %2d" % customer.coffee_vouchers
 
-    write(bar_lcd, output)
+    write((bar_lcd,), output)
     # We don't want to display the username on the customer screen
     if customer.intern:
         output = output[output.find("\n")+1:]
-    write(customer_lcd, output)
+    write((customer_lcd,), output)
 
 
 def register_use(customer, amount):
-    for lcd in bar_lcd, customer_lcd:
-        write(lcd, "Trekker %d bonger" % amount)
+    write((bar_lcd, customer_lcd), "Trekker %d bonger" % amount)
 
     if api.use_vouchers(customer.username, amount):
-        for lcd in bar_lcd, customer_lcd:
-            write(lcd, "%d bonger trukket" % amount)
+        write((bar_lcd, customer_lcd), "%d bonger trukket" % amount)
     else:
-        write(customer_lcd, "Du har ikke nok bonger")
-        write(bar_lcd, "Kunden har ikke nok bonger")
+        write((bar_lcd, customer_lcd), "Ikke nok bonger")
 
 
 if __name__ == "__main__":
@@ -156,7 +148,7 @@ if __name__ == "__main__":
         display_info(customer)
 
         # Get amount of bongs to remove
-        amount = AmountMenu(bar_lcd, clean=False, position=3).menu()
+        amount = AmountMenu((bar_lcd,), clean=False, position=3).menu()
         if not amount:
             continue
 

@@ -39,27 +39,29 @@ class LcdDisplay:
         self.raw("SI2CA%c" % new_addr)
 
 
-def write(lcd, text, clean=True, start_position=0):
+def write(lcds, text, clean=True, start_position=0):
     if clean:
-        lcd.clean()
+        for lcd in lcds:
+            lcd.clean()
 
     text = text.splitlines()
-    for i in range(len(text)):
-        lcd.set_pointer(0, i+start_position)
-        lcd.write(text[i])
+    for lcd in lcds:
+        for i in range(len(text)):
+            lcd.set_pointer(0, i+start_position)
+            lcd.write(text[i])
 
 
 class _Menu:
-    def __init__(self, lcd, clean=True, position=0):
+    def __init__(self, lcds, clean=True, position=0):
         self.lcd = lcd
         self.clean = clean
         self.position = position
 
         if clean:
-            self.lcd.clean()
+            for lcd in lcds:
+                self.lcd.clean()
         else:
-            # If we're not cleaning, then we'll need a delay to not accidentially clean the screen
-            time.sleep(0.05)
+            time.sleep(0.05) # If we're not cleaning, then we'll need a delay to not accidentially clean the screen
 
     def _clean_up(self):
         pass
@@ -114,8 +116,8 @@ class _Menu:
 
 
 class ChoiceMenu(_Menu):
-    def __init__(self, lcd, description, choices, clean=True, position=0):
-        super().__init__(lcd, clean, position)
+    def __init__(self, lcds, description, choices, clean=True, position=0):
+        super().__init__(lcds, clean, position)
         self.description = description
         self.choices = choices
 
@@ -160,13 +162,14 @@ class AmountMenu(_Menu):
 
 
 class KeyboardMenu(_Menu):
-    def __init__(self, lcd, prompt, clean=True, position=0):
-        super().__init__(lcd, clean, position)
+    def __init__(self, lcds, prompt, clean=True, position=0):
+        super().__init__(lcds, clean, position)
         self.prompt = prompt + "\n> "
 
         self.screen = curses.initscr()
         self.screen.nodelay(True) # Makes getch() non-blocking
-        lcd.tick_on()
+        for lcd in lcds:
+            lcd.tick_on()
 
     def _lcd_output(self, current_value):
         return self.prompt + str(current_value)
@@ -175,7 +178,7 @@ class KeyboardMenu(_Menu):
         char = self.screen.getch()
 
         if current_value is 0:
-            return ""
+            return "" # Hacky way of making the menu use strings instead of numbers
         elif char == 127: # Backspace
             return current_value[:-1]
         elif char is not curses.ERR and str(chr(char)) in "".join([string.ascii_letters, string.digits, ".-_"]):
@@ -184,5 +187,6 @@ class KeyboardMenu(_Menu):
             return current_value
 
     def _clean_up(self):
-        self.lcd.tick_off()
+        for lcd in lcds:
+            self.lcd.tick_off()
         curses.endwin()
