@@ -1,15 +1,13 @@
 #!/bin/python3
 import sys
 import time
-import string
 import configparser
-import curses
 import RPi.GPIO as GPIO
 
 import nfc
 from constants import *
 from api import CybApi
-from lcd import LcdDisplay, write, menu
+from lcd import *
 
 # Host address of the LCD display
 bar_lcd = LcdDisplay(0x28, BUS_ID) # Large display
@@ -62,57 +60,17 @@ def get_card_id():
     return nfc.getid()
 
 
-def get_keyboard_input(prompt):
-    screen = curses.initscr()
-    screen.nodelay(True) # Prevents getch() from blocking
-    output = prompt + "\n> "
-    value = ""
-    prev_value = None
-
-    for lcd in bar_lcd, customer_lcd:
-        lcd.clean()
-        lcd.tick_on()
-    while not GPIO.input(ENTER_BUTTON):
-        if value is not prev_value:
-            prev_value = value
-            for lcd in bar_lcd, customer_lcd:
-                write(lcd, output + value)
-
-        char = screen.getch()
-        if GPIO.input(CANCEL_BUTTON) or char == 27: # Escape Key
-            value = None
-            break
-        elif char == 10: # Enter Key
-            break
-        elif char == 127: # Backspace
-            value = value[:-1]
-        elif char is not curses.ERR and str(chr(char)) in "".join([string.ascii_letters, string.digits, ".-_"]):
-            value += str.lower(str(chr(char)))
-
-    # Cleanup
-    for lcd in bar_lcd, customer_lcd:
-        lcd.tick_off()
-    curses.endwin()
-
-    return value
-
-
 def register_customer(card_uid):
     username = ""
     user_id = ""
     is_intern = False
 
-    choice = menu(
-            bar_lcd,
-            "Er personen intern?",
-            ("Ja", "Nei")
-    )
+    choice = ChoiceMenu(bar_lcd, "Er personen intern?", ("Ja", "Nei")).menu()
     if choice is "Ja":
         # TODO: Check if username actually exists
         is_intern = True
-        user = None
-        while True:
-            username = get_keyboard_input("Brukernavn")
+        while not user_id:
+            username = KeyboardMenu(bar_lcd, "Brukernavn").menu()
             if not username:
                 return (None, None) # Empty username means cancel
 
@@ -123,7 +81,6 @@ def register_customer(card_uid):
                 time.sleep(2) # Give user some time to read
             else:
                 user_id = user["id"]
-                break
     elif choice is None:
         return (None, None)
 
@@ -142,11 +99,7 @@ def get_customer(card_uid):
 
     if username is None:
         write(customer_lcd, "Ikke gjenkjent")
-        choice = menu(
-                bar_lcd,
-                "Kort ikke gjenkjent",
-                ("Register", "Avbryt")
-        )
+        choice = ChoiceMenu(bar_lcd, "Kort ikke gjenkjent", ("Register", "Avbryt")).menu()
         if choice is "Kanseler" or None:
             return None
 
@@ -156,7 +109,7 @@ def get_customer(card_uid):
 
     vouchers = 0
     # A NFC card might only be used as a coffee card.
-    if username:
+    if is_intern:
         vouchers = api.get_voucher_balance(username)
     coffee_vouchers = api.get_coffee_voucher_balance(card_uid)
 
@@ -176,34 +129,6 @@ def display_info(customer):
     if customer.intern:
         output = output[output.find("\n")+1:]
     write(customer_lcd, output)
-
-
-# TODO: Figure out a way to make this function use lcd.menu(), since they're more or less the same thing.
-def get_amount():
-    amount = 0
-    prev_amount = None
-    active_button = None # To avoid adding/removing multiple bong in one press.
-
-    while not GPIO.input(ENTER_BUTTON):
-        if amount is not prev_amount:
-            time.sleep(0.05)
-            prev_amount = amount
-            write(bar_lcd, "Antall a fjerne: %2d" % amount, clean=False, start_position=3)
-        
-        if GPIO.input(CANCEL_BUTTON):
-            return 0
-        elif GPIO.input(PLUSS_BUTTON):
-            if active_button is not PLUSS_BUTTON:
-                amount += 1
-            active_button = PLUSS_BUTTON
-        elif GPIO.input(MINUS_BUTTON) and amount > 0:
-            if active_button is not MINUS_BUTTON:
-                amount -= 1
-            active_button = MINUS_BUTTON
-        else:
-            active_button = None
-        
-    return amount
 
 
 def register_use(customer, amount):
@@ -231,8 +156,8 @@ if __name__ == "__main__":
         display_info(customer)
 
         # Get amount of bongs to remove
-        amount = get_amount()
-        if amount is 0:
+        amount = AmountMenu(bar_lcd, clean=False, position=3).menu()
+        if not amount:
             continue
 
         # Remove x amount of bongs from customer
