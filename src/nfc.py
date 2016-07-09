@@ -53,7 +53,6 @@ def setup():
 
 
 def get_card_id():
-    time.sleep(0.05) # If there was a loop previously, this prevents the screen from becomming blank
     write((bar_lcd, customer_lcd), "Venter pa kort")
 
     return nfc.getid()
@@ -127,34 +126,74 @@ def display_info(customer):
     write((customer_lcd,), output)
 
 
-def register_use(customer, amount):
+def register_use(identifier, amount, api_method):
     write((bar_lcd, customer_lcd), "Trekker %d bonger" % amount)
 
-    if api.use_vouchers(customer.username, amount):
+    if api_method(identifier, amount):
         write((bar_lcd, customer_lcd), "%d bonger trukket" % amount)
     else:
         write((bar_lcd, customer_lcd), "Ikke nok bonger")
+
+def register_vouchers(card_uid, amount):
+    write((bar_lcd, customer_lcd), "Legger til %d bonger" % amount)
+
+    if api.register_coffee_vouchers(card_uid, amount):
+        write((bar_lcd, customer_lcd), "%d bonger lagt til" % amount)
+    else:
+        write((bar_lcd, customer_lcd), "Feil D:")
+
+
+def buy_action():
+    # Get customer info
+    card_uid = get_card_id()
+    customer = get_customer(card_uid)
+    if customer is None:
+        return
+
+    # Display info about the customer
+    display_info(customer)
+
+    # Get amount of bongs to remove
+    amount = AmountMenu((bar_lcd,), "Antall a fjerne", clean=False, position=3).menu()
+    if not amount:
+        return
+
+    # Remove x amount of bongs from customer
+    voucher_type = None
+    if customer.intern:
+        voucher_type = ChoiceMenu((bar_lcd,), "Hva slags bong?", ("Internbong", "Kaffebong")).menu()
+    if voucher_type is "Internbong":
+        register_use(customer.username, amount, api.use_vouchers)
+    else:
+        register_use(card_uid, amount, api.use_coffee_vouchers)
+
+    # Give people some time to read
+    time.sleep(5)
+
+
+def register_action():
+    COFFEE_CARD_AMOUNT = 10
+
+    card_uid = get_card_id()
+    customer = get_customer(card_uid) # TODO: Rewrite to get rid of useless actions
+
+    register_vouchers(card_uid, COFFEE_CARD_AMOUNT)
+
+    # Give people some time to read
+    time.sleep(5)
 
 
 if __name__ == "__main__":
     setup()
 
     while True:
-        # Get customer info
-        customer = get_customer(get_card_id())
-        if customer is None:
-            continue
+        choice = ChoiceMenu(
+                (bar_lcd,),
+                "Hva vil du gjore?",
+                ("Uttak", "Kjop kaffebonger")
+        ).menu()
 
-        # Display info about the customer
-        display_info(customer)
-
-        # Get amount of bongs to remove
-        amount = AmountMenu((bar_lcd,), clean=False, position=3).menu()
-        if not amount:
-            continue
-
-        # Remove x amount of bongs from customer
-        register_use(customer, amount)
-
-        # Give people some time to read
-        time.sleep(5)
+        if choice is "Uttak":
+            buy_action()
+        elif choice is "Kjop kaffebonger":
+            register_action()

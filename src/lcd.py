@@ -22,6 +22,9 @@ class LcdDisplay:
     def write(self, text):
         self.raw("TT%s\x00" % text)
 
+    def newline(self):
+        self.raw("TRT")
+
     def set_pointer(self, x, y):
         self.raw("TP%c%c" % (x, y))
 
@@ -46,9 +49,13 @@ def write(lcds, text, clean=True, start_position=0):
 
     text = text.splitlines()
     for lcd in lcds:
+        if start_position != 0:
+            lcd.set_pointer(0, start_position)
+            # These displays are shit, so we need to wait a bit before writing. If not we'll get a blank screen
+            time.sleep(0.1)
         for i in range(len(text)):
-            lcd.set_pointer(0, i+start_position)
             lcd.write(text[i])
+            lcd.newline()
 
 
 class _Menu:
@@ -60,8 +67,6 @@ class _Menu:
         if clean:
             for lcd in lcds:
                 lcd.clean()
-        else:
-            time.sleep(0.05) # If we're not cleaning, then we'll need a delay to not accidentially clean the screen
 
     def _clean_up(self):
         pass
@@ -152,8 +157,12 @@ class ChoiceMenu(_Menu):
 
 
 class AmountMenu(_Menu):
+    def __init__(self, lcds, prompt, clean=True, position=0):
+        super().__init__(lcds, clean, position)
+        self.prompt = prompt
+
     def _lcd_output(self, amount):
-        return "Antall a fjerne: %2d" % amount
+        return "%s: %2d" % (self.prompt, amount)
 
     def _pluss_action(self, amount):
         return amount + 1

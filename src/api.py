@@ -1,9 +1,10 @@
+from datetime import datetime
 from requests_oauthlib import OAuth2Session
 from oauthlib.oauth2 import LegacyApplicationClient
 
 
 class CybApi:
-    _base_url = "https://tomcat.mrow.me:8080/"
+    _base_url = "https://tomcat.mrow.me:8000/"
 
     def __init__(self, username, password, client_id, client_secret):
         self.username = username
@@ -70,11 +71,7 @@ class CybApi:
         else:
             return False
 
-    def get_voucher_balance(self, username):
-        # FIXME: This should be done in the internsystem!
-        url = self._base_url + "api/voucher/wallets"
-        params = {"format": "json", "user": username}
-        
+    def _get_voucher_balance(self, url, params):
         request = self._client.get(url, params=params, verify=False)
         json = request.json()
 
@@ -86,14 +83,19 @@ class CybApi:
 
         return balance
 
+    def get_voucher_balance(self, username):
+        url = self._base_url + "api/voucher/wallets"
+        params = {"format": "json", "user": username}
+
+        return self._get_voucher_balance(url, params)
+        
     def get_coffee_voucher_balance(self, card_uid):
-        # TODO: Not implemented in internsystem yet
-        return 0
+        url = self._base_url + "api/coffee/wallets"
+        params = {"format": "json", "card_uid": card_uid}
 
-    def use_vouchers(self, username, amount):
-        url = self._base_url + "api/voucher/users/" + username + "/use_vouchers"
-        data = {"vouchers": amount}
+        return self._get_voucher_balance(url, params)
 
+    def _use_vouchers(self, url, data):
         request = self._client.post(url, data=data, verify=False)
 
         if request.status_code == 201:
@@ -102,3 +104,25 @@ class CybApi:
             return False
         else:
             print(str(request.status_code) + "\n" + str(request.content))
+
+    def use_vouchers(self, username, amount):
+        url = self._base_url + "api/voucher/users/" + username + "/use_vouchers"
+        data = {"vouchers": amount}
+
+        return self._use_vouchers(url, data)
+
+    def use_coffee_vouchers(self, card_uid, amount):
+        url = self._base_url + "api/coffee/cards/" + card_uid + "/use_vouchers"
+        data = {"vouchers": amount}
+
+        return self._use_vouchers(url, data)
+
+    def register_coffee_vouchers(self, card_uid, amount):
+        url = self._base_url + "api/coffee/registerlogs"
+        data = {"card": card_uid, "vouchers": amount}
+
+        request = self._client.post(url, data=data, verify=False)
+
+        if request.status_code == 201:
+            return True
+        print(str(request.status_code) + "\n" + str(request.content))
