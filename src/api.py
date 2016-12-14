@@ -14,26 +14,26 @@ class CybApi:
 
         # Get a token via the Resource Owner Password Credential Grant OAuth2 API
         oauth = OAuth2Session(client=LegacyApplicationClient(client_id=client_id))
-        self._token = oauth.fetch_token(verify=False,
-                token_url=self._base_url + "o/token/",
-                username=username, password=password,
-                client_id=client_id, client_secret=client_secret
+        self._token = oauth.fetch_token(
+            verify=False,
+            token_url=self._base_url + "o/token/",
+            username=username, password=password,
+            client_id=client_id, client_secret=client_secret
         )
         # Make a client for connecting to the API.
         self._client = OAuth2Session(
-                client_id,
-                token = self._token,
-                auto_refresh_url=self._base_url + "o/token/",
-                auto_refresh_kwargs={
-                    "client_id": client_id,
-                    "client_secret": client_secret
-                },
-                token_updater=self._token_updater
+            client_id,
+            token=self._token,
+            auto_refresh_url=self._base_url + "o/token/",
+            auto_refresh_kwargs={
+                "client_id": client_id,
+                "client_secret": client_secret
+            },
+            token_updater=self._token_updater
         )
-        
+
     def _token_updater(self, token):
         self._token = token
-
 
     def get_user(self, username):
         url = self._base_url + "api/core/users/" + username
@@ -54,7 +54,7 @@ class CybApi:
         if not json:
             return (None, None)
         else:
-            json = json[0] # For some reason it returns a dict within a list...
+            json = json[0]  # For some reason it returns a dict within a list...
 
         if not json["user"]:
             return ("", json["intern"])
@@ -88,7 +88,7 @@ class CybApi:
         params = {"format": "json", "user": username}
 
         return self._get_voucher_balance(url, params)
-        
+
     def get_coffee_voucher_balance(self, card_uid):
         url = self._base_url + "api/coffee/wallets"
         params = {"format": "json", "card_uid": card_uid}

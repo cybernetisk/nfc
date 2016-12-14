@@ -1,17 +1,15 @@
 #!/bin/python3
 import sys
-import time
 import configparser
 import RPi.GPIO as GPIO
 
 import nfc
-from constants import *
 from api import CybApi
 from lcd import *
 
 # Host address of the LCD display
-bar_lcd = LcdDisplay(0x28, BUS_ID) # Large display
-customer_lcd = LcdDisplay(0x27, BUS_ID) # Small display
+bar_lcd = LcdDisplay(0x28, BUS_ID)  # Large display
+customer_lcd = LcdDisplay(0x27, BUS_ID)  # Small display
 # API for internsystem
 api = None
 
@@ -39,8 +37,8 @@ def setup():
     global api
     api_config = config._sections["api"]
     api = CybApi(
-            api_config["username"], api_config["password"],
-            api_config["client_id"], api_config["client_secret"]
+        api_config["username"], api_config["password"],
+        api_config["client_id"], api_config["client_secret"]
     )
 
     # Get the bong amount inputs ready
@@ -69,12 +67,12 @@ def register_customer(card_uid):
         while not user_id:
             username = KeyboardMenu((bar_lcd, customer_lcd), "Brukernavn").menu()
             if not username:
-                return (None, None) # Empty username means cancel
+                return (None, None)  # Empty username means cancel
 
             user = api.get_user(username)
-            if "detail" in user: # If there is a detail, it means that we didn't get a match.
+            if "detail" in user:  # If there is a detail, it means that we didn't get a match.
                 write((bar_lcd, customer_lcd), "Brukeren finnes ikke")
-                time.sleep(2) # Give user some time to read
+                time.sleep(2)  # Give user some time to read
             else:
                 user_id = user["id"]
     elif choice is None:
@@ -83,7 +81,7 @@ def register_customer(card_uid):
     write((bar_lcd, customer_lcd), "Registerer kort")
     if api.register_card(card_uid, user_id, is_intern):
         write((bar_lcd, customer_lcd), "Kort registrert!")
-        time.sleep(2) # Give the user some time to read
+        time.sleep(2)  # Give the user some time to read
 
     return (username, is_intern)
 
@@ -122,7 +120,7 @@ def display_info(customer):
     write((bar_lcd,), output)
     # We don't want to display the username on the customer screen
     if customer.intern:
-        output = output[output.find("\n")+1:]
+        output = output[output.find("\n") + 1:]
     write((customer_lcd,), output)
 
 
@@ -133,6 +131,7 @@ def register_use(identifier, amount, api_method):
         write((bar_lcd, customer_lcd), "%d bonger trukket" % amount)
     else:
         write((bar_lcd, customer_lcd), "Ikke nok bonger")
+
 
 def register_vouchers(card_uid, amount):
     write((bar_lcd, customer_lcd), "Legger til %d bonger" % amount)
@@ -175,7 +174,7 @@ def register_action():
     COFFEE_CARD_AMOUNT = 10
 
     card_uid = get_card_id()
-    customer = get_customer(card_uid) # TODO: Rewrite to get rid of useless actions
+    customer = get_customer(card_uid)  # TODO: Rewrite to get rid of useless actions
 
     register_vouchers(card_uid, COFFEE_CARD_AMOUNT)
 
@@ -188,9 +187,9 @@ if __name__ == "__main__":
 
     while True:
         choice = ChoiceMenu(
-                (bar_lcd,),
-                "Hva vil du gjore?",
-                ("Uttak", "Kjop kaffebonger")
+            (bar_lcd,),
+            "Hva vil du gjore?",
+            ("Uttak", "Kjop kaffebonger")
         ).menu()
 
         if choice is "Uttak":
