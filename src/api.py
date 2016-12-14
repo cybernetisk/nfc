@@ -125,4 +125,3 @@ class CybApi:
 
         if request.status_code == 201:
             return True
-        print(str(request.status_code) + "\n" + str(request.content))
