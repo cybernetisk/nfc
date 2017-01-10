@@ -183,6 +183,7 @@ class ChoiceMenu(_Menu):
     """
     def __init__(self, lcds, description, choices, clean=True, position=0):
         super().__init__(lcds, clean, position)
+        self.active_choice = 0
         self.description = description
         self.choices = choices
 
@@ -221,6 +222,7 @@ class AmountMenu(_Menu):
     """
     def __init__(self, lcds, prompt, clean=True, position=0):
         super().__init__(lcds, clean, position)
+        self.active_choice = 0
         self.prompt = prompt
 
     def _lcd_output(self):
