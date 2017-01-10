@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 src/nfc.py $(pwd)/config.ini
+python3 src/main.py $(pwd)/config.ini

@@ -4,7 +4,7 @@ from oauthlib.oauth2 import LegacyApplicationClient
 
 
 class CybApi:
-    _base_url = "https://tomcat.mrow.me:8000/"
+    _base_url = "https://in.cyb.no/"
 
     def __init__(self, username, password, client_id, client_secret):
         self.username = username
