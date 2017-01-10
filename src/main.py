@@ -186,6 +186,7 @@ if __name__ == "__main__":
     setup()
 
     while True:
+        write((customer_lcd,), "Heisann!")
         choice = ChoiceMenu(
             (bar_lcd,),
             "Hva vil du gjore?",

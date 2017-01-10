@@ -159,12 +159,24 @@ class _Menu:
                 write(self.lcds, output, self.clean, self.position)
 
             if GPIO.input(CANCEL_BUTTON):
+                if self.active_choice is CANCEL_BUTTON:
+                    continue
+                self.active_choice = CANCEL_BUTTON
                 self._use_button(CANCEL_BUTTON, self._cancel_action)
             elif GPIO.input(ENTER_BUTTON):
+                if self.active_choice is ENTER_BUTTON:
+                    continue
+                self.active_choice = ENTER_BUTTON
                 self._use_button(ENTER_BUTTON, self._enter_action)
             elif GPIO.input(PLUSS_BUTTON):
+                if self.active_choice is PLUSS_BUTTON:
+                    continue
+                self.active_choice = PLUSS_BUTTON
                 self._use_button(PLUSS_BUTTON, self._plus_action)
             elif GPIO.input(MINUS_BUTTON):
+                if self.active_choice is MINUS_BUTTON:
+                    continue
+                self.active_choice = MINUS_BUTTON
                 self._use_button(MINUS_BUTTON, self._minus_action)
             else:
                 self.active_button = None
@@ -252,21 +264,23 @@ class KeyboardMenu(_Menu):
             lcd.tick_on()
 
     def _lcd_output(self):
+        if self.active_choice[-1] is '`':
+            return self.prompt + str(self.active_choice[:-1])
         return self.prompt + str(self.active_choice)
 
     def _enter_action(self):
-        if self.active_choice[:-1] == '`':
+        if self.active_choice[-1] == '`':
             self.running = False
             pass
         else:
             self.active_choice += '`'
 
     def _change_last_char(self, operator):
-        cur_char = ord(self.active_choice[:-1]) - 96  # Only deal with lower case characters (And a extra char for nothing)
-        cur_char = operator(cur_char, 1) % 26  # 25 characters in the alphabet (plus one for nothing)
+        cur_char = ord(self.active_choice[-1]) - 96  # Only deal with lower case characters (And a extra char for nothing)
+        cur_char = operator(cur_char, 1) % 27  # 26 characters in the alphabet (plus one for nothing)
         cur_char += 96  # Set it back to lower case character
 
-        self.active_choice[:-1] = chr(cur_char)
+        self.active_choice = self.active_choice[:-1] + chr(cur_char)
 
     def _plus_action(self):
         self._change_last_char(lambda a, b: a + b)
