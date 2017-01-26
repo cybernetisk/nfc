@@ -158,22 +158,22 @@ class _Menu:
                 prev_output = output
                 write(self.lcds, output, self.clean, self.position)
 
-            if GPIO.input(CANCEL_BUTTON):
+            if not GPIO.input(CANCEL_BUTTON):
                 if self.active_choice is CANCEL_BUTTON:
                     continue
                 self.active_choice = CANCEL_BUTTON
                 self._use_button(CANCEL_BUTTON, self._cancel_action)
-            elif GPIO.input(ENTER_BUTTON):
+            elif not GPIO.input(ENTER_BUTTON):
                 if self.active_choice is ENTER_BUTTON:
                     continue
                 self.active_choice = ENTER_BUTTON
                 self._use_button(ENTER_BUTTON, self._enter_action)
-            elif GPIO.input(PLUSS_BUTTON):
+            elif not GPIO.input(PLUSS_BUTTON):
                 if self.active_choice is PLUSS_BUTTON:
                     continue
                 self.active_choice = PLUSS_BUTTON
                 self._use_button(PLUSS_BUTTON, self._plus_action)
-            elif GPIO.input(MINUS_BUTTON):
+            elif not GPIO.input(MINUS_BUTTON):
                 if self.active_choice is MINUS_BUTTON:
                     continue
                 self.active_choice = MINUS_BUTTON
@@ -183,7 +183,7 @@ class _Menu:
 
         self._clean_up()
         # The enter button is usually held for a few more ms, causing later options to get automatically selected.
-        while GPIO.input(ENTER_BUTTON) or GPIO.input(CANCEL_BUTTON):
+        while not (GPIO.input(ENTER_BUTTON) or GPIO.input(CANCEL_BUTTON)):
             pass
         return self._return_action()
 

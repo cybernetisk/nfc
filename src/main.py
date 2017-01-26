@@ -2,6 +2,7 @@
 import sys
 import configparser
 import RPi.GPIO as GPIO
+import RPi
 
 import nfc
 from api import CybApi
@@ -44,7 +45,7 @@ def setup():
     # Get the bong amount inputs ready
     GPIO.setmode(GPIO.BOARD)
     for pin in CANCEL_BUTTON, ENTER_BUTTON, PLUSS_BUTTON, MINUS_BUTTON:
-        GPIO.setup(pin, GPIO.IN)
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     # Initialize the NFC reader
     nfc.open()
