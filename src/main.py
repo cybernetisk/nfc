@@ -4,7 +4,7 @@ import configparser
 import RPi.GPIO as GPIO
 import RPi
 
-import nfc
+import main
 from api import CybApi
 from lcd import *
 
@@ -48,13 +48,13 @@ def setup():
         GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     # Initialize the NFC reader
-    nfc.open()
+    main.open()
 
 
 def get_card_id():
     write((bar_lcd, customer_lcd), "Venter pa kort")
 
-    return nfc.getid()
+    return main.getid()
 
 
 def register_customer(card_uid):
