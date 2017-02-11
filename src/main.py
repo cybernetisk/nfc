@@ -28,7 +28,7 @@ def setup():
     for lcd in bar_lcd, customer_lcd:
         lcd.tick_off()
         lcd.clean()
-        lcd.write("Laster systemet!")
+        lcd.write("Loading system!")
 
     # Get the config
     config = configparser.ConfigParser()
@@ -52,7 +52,7 @@ def setup():
 
 
 def get_card_id():
-    write((bar_lcd, customer_lcd), "Venter pa kort")
+    write((bar_lcd, customer_lcd), "Waiting for card")
 
     return main.getid()
 
@@ -62,26 +62,26 @@ def register_customer(card_uid):
     user_id = ""
     is_intern = False
 
-    choice = ChoiceMenu((bar_lcd,), "Er personen intern?", ("Ja", "Nei")).menu()
-    if choice is "Ja":
+    choice = ChoiceMenu((bar_lcd,), "Is the person an intern?", ("Yes", "No")).menu()
+    if choice is "Yes":
         is_intern = True
         while not user_id:
-            username = KeyboardMenu((bar_lcd, customer_lcd), "Brukernavn").menu()
+            username = KeyboardMenu((bar_lcd, customer_lcd), "Username").menu()
             if not username:
                 return (None, None)  # Empty username means cancel
 
             user = api.get_user(username)
             if "detail" in user:  # If there is a detail, it means that we didn't get a match.
-                write((bar_lcd, customer_lcd), "Brukeren finnes ikke")
+                write((bar_lcd, customer_lcd), "User not found")
                 time.sleep(2)  # Give user some time to read
             else:
                 user_id = user["id"]
     elif choice is None:
         return (None, None)
 
-    write((bar_lcd, customer_lcd), "Registerer kort")
+    write((bar_lcd, customer_lcd), "Registrating card")
     if api.register_card(card_uid, user_id, is_intern):
-        write((bar_lcd, customer_lcd), "Kort registrert!")
+        write((bar_lcd, customer_lcd), "Card registerd!")
         time.sleep(2)  # Give the user some time to read
 
     return (username, is_intern)
@@ -92,9 +92,9 @@ def get_customer(card_uid):
 
     # The card is not in the database
     if username is None:
-        write((customer_lcd,), "Ikke gjenkjent")
-        choice = ChoiceMenu((bar_lcd,), "Kort ikke gjenkjent", ("Register", "Avbryt")).menu()
-        if choice is "Avbryt" or choice is None:
+        write((customer_lcd,), "Not accepted")
+        choice = ChoiceMenu((bar_lcd,), "Unknown card", ("Register", "Cancel")).menu()
+        if choice is "Cancel" or choice is None:
             return None
 
         username, is_intern = register_customer(card_uid)
@@ -115,8 +115,8 @@ def display_info(customer):
 
     if customer.intern:
         output += "Name: %s\n" % customer.username
-        output += "Bonger: %2d\n" % customer.vouchers
-    output += "Kaffe: %2d" % customer.coffee_vouchers
+        output += "Vouchers: %2d\n" % customer.vouchers
+    output += "Coffee: %2d" % customer.coffee_vouchers
 
     write((bar_lcd,), output)
     # We don't want to display the username on the customer screen
@@ -126,21 +126,21 @@ def display_info(customer):
 
 
 def register_use(identifier, amount, api_method):
-    write((bar_lcd, customer_lcd), "Trekker %d bonger" % amount)
+    write((bar_lcd, customer_lcd), "Withdrawing %d vouchers" % amount)
 
     if api_method(identifier, amount):
-        write((bar_lcd, customer_lcd), "%d bonger trukket" % amount)
+        write((bar_lcd, customer_lcd), "%d vouchers withdrawn" % amount)
     else:
-        write((bar_lcd, customer_lcd), "Ikke nok bonger")
+        write((bar_lcd, customer_lcd), "Not enough vouchers")
 
 
 def register_vouchers(card_uid, amount):
-    write((bar_lcd, customer_lcd), "Legger til %d bonger" % amount)
+    write((bar_lcd, customer_lcd), "Adding %d vouchers" % amount)
 
     if api.register_coffee_vouchers(card_uid, amount):
-        write((bar_lcd, customer_lcd), "%d bonger lagt til" % amount)
+        write((bar_lcd, customer_lcd), "%d vouchers added" % amount)
     else:
-        write((bar_lcd, customer_lcd), "Feil D:")
+        write((bar_lcd, customer_lcd), "Wrong D:")
 
 
 def buy_action():
@@ -154,15 +154,15 @@ def buy_action():
     display_info(customer)
 
     # Get amount of bongs to remove
-    amount = AmountMenu((bar_lcd,), "Antall a fjerne", clean=False, position=3).menu()
+    amount = AmountMenu((bar_lcd,), "Amount to withdraw", clean=False, position=3).menu()
     if not amount:
         return
 
     # Remove x amount of bongs from customer
     voucher_type = None
     if customer.intern:
-        voucher_type = ChoiceMenu((bar_lcd,), "Hva slags bong?", ("Internbong", "Kaffebong")).menu()
-    if voucher_type is "Internbong":
+        voucher_type = ChoiceMenu((bar_lcd,), "What type?", ("Internvoucher", "Coffeevoucher")).menu()
+    if voucher_type is "Internvoucher":
         register_use(customer.username, amount, api.use_vouchers)
     else:
         register_use(card_uid, amount, api.use_coffee_vouchers)
@@ -190,11 +190,11 @@ if __name__ == "__main__":
         write((customer_lcd,), "Heisann!")
         choice = ChoiceMenu(
             (bar_lcd,),
-            "Hva vil du gjore?",
-            ("Uttak", "Kjop kaffebonger")
+            "What do you want to do?",
+            ("Withdraw", "Buy coffee vouchers")
         ).menu()
 
-        if choice is "Uttak":
+        if choice is "Withdraw":
             buy_action()
-        elif choice is "Kjop kaffebonger":
+        elif choice is "Buy coffee vouchers":
             register_action()
