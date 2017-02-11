@@ -92,8 +92,8 @@ def get_customer(card_uid):
     # The card is not in the database
     if username is None:
         write((customer_lcd,), "Not accepted")
-        choice = ChoiceMenu((bar_lcd,), "Unknown card", ("Register", "Cancle")).menu()
-        if choice is "Cancle" or choice is None:
+        choice = ChoiceMenu((bar_lcd,), "Unknown card", ("Register", "Cancel")).menu()
+        if choice is "Cancel" or choice is None:
             return None
 
         username, is_intern = register_customer(card_uid)
@@ -125,7 +125,7 @@ def display_info(customer):
 
 
 def register_use(identifier, amount, api_method):
-    write((bar_lcd, customer_lcd), "Witdrawing %d vouchers" % amount)
+    write((bar_lcd, customer_lcd), "Withdrawing %d vouchers" % amount)
 
     if api_method(identifier, amount):
         write((bar_lcd, customer_lcd), "%d vouchers withdrawn" % amount)
